@@ -24,32 +24,32 @@ class H6S3Topo( Topo ):
         Topo.__init__( self )
 
         # Add hosts and switches
-        hs1 = self.addHost( 'hs1' )
-        hs2 = self.addHost( 'hs2' )
-        ss1 = self.addSwitch( 'ss1' )
+        h1 = self.addHost( 'h1' )
+        h2 = self.addHost( 'h2' )
+        s7 = self.addSwitch( 's7' )
 
-        ht1 = self.addHost( 'ht1' )
-        ht2 = self.addHost( 'ht2' )
-        st1 = self.addSwitch( 'st1' )
+        h3 = self.addHost( 'h3' )
+        h4 = self.addHost( 'h4' )
+        s8 = self.addSwitch( 's8' )
 
-        hk1 = self.addHost( 'hk1' )
-        hk2 = self.addHost( 'hk2' )
-        sk1 = self.addSwitch( 'sk1' )
+        h5 = self.addHost( 'h5' )
+        h6 = self.addHost( 'h6' )
+        s9 = self.addSwitch( 's9' )
 
 
         # Add links
-        self.addLink( hs1, ss1 )
-        self.addLink( hs2, ss1 )
+        self.addLink( h1, s7 )
+        self.addLink( h2, s7 )
 
-        self.addLink( ht1, st1 )
-        self.addLink( ht2, st1 )
+        self.addLink( h3, s8 )
+        self.addLink( h4, s8 )
 
-        self.addLink( hk1, sk1 )
-        self.addLink( hk2, sk1 )
+        self.addLink( h5, s9 )
+        self.addLink( h6, s9 )
 
-        self.addLink( ss1, st1 )
-        self.addLink( ss1, sk1 )
-        self.addLink( st1, sk1 )
+        self.addLink( s7, s8 )
+        self.addLink( s7, s9 )
+        self.addLink( s8, s9 )
 
 
 topos = { 'h6s3topo': ( lambda: H6S3Topo() ) }
