@@ -46,7 +46,7 @@ class Edge2(Topo):
 
 
 
-        sA = self.addSwitch("s5")
+        sA = self.addSwitch("s6")
 #        sB = self.addSwitch("s6")                                                                                                                                                                                  
 #        sC = self.addSwitch("s7")                                                                                                                                                                                  
 #        sD = self.addSwitch("s8")                                                                                                                                                                                  
