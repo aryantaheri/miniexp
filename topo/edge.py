@@ -73,6 +73,7 @@ class Edge3(Topo):
 #        sD = self.addSwitch("s8")
         self.addLink(h1, sA)
         self.addLink(h2, sB)
+        self.addLink(sA, sB)
 
 
 topos = { 'edge1': ( lambda: Edge1() ), 'edge2': ( lambda: Edge2() ), 'edge3': ( lambda: Edge3() ) }
