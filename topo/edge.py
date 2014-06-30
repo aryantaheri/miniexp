@@ -47,11 +47,32 @@ class Edge2(Topo):
 
 
         sA = self.addSwitch("s6")
-#        sB = self.addSwitch("s6")                                                                                                                                                                                  
-#        sC = self.addSwitch("s7")                                                                                                                                                                                  
-#        sD = self.addSwitch("s8")                                                                                                                                                                                  
-
+#        sB = self.addSwitch("s6") 
+#        sC = self.addSwitch("s7") 
+#        sD = self.addSwitch("s8")                                                                                                                                                                                 
         self.addLink(h1, sA)
         self.addLink(h2,sA)
 
-topos = { 'edge1': ( lambda: Edge1() ), 'edge2': ( lambda: Edge2() ) }
+
+class Edge3(Topo):
+    "Edge topo"
+
+    def __init__( self, enable_all = True ):
+        "Create custom topo for edge switches."
+        Topo.__init__( self )
+
+        h1 = self.addHost("h1",
+                          ip="10.0.0.30/24")
+
+        h2 = self.addHost("h2",
+                          ip="10.0.0.31/24")
+
+        sA = self.addSwitch("s7")
+        sB = self.addSwitch("s8")
+#        sC = self.addSwitch("s7")
+#        sD = self.addSwitch("s8")
+        self.addLink(h1, sA)
+        self.addLink(h2, sB)
+
+
+topos = { 'edge1': ( lambda: Edge1() ), 'edge2': ( lambda: Edge2() ), 'edge3': ( lambda: Edge3() ) }
