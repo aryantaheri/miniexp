@@ -180,6 +180,8 @@ class FatTree3(Topo):
 
     def __init__( self, k = 4, create_hosts = False, enable_all = True):
         "Simple fat tree"
+        Topo.__init__( self )
+
         aggrs = []
         hid = 0
         sid = 0
