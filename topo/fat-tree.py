@@ -133,4 +133,5 @@ class FatTree2(Topo):
                     host = self.addHost('h%s' % hid)
                     self.addLink(edge_sw, host)
 
+# Note: create_hosts is a boolean, while using mn to create this topology 0 means False, and any other value will be interepreted as create_hosts=True
 topos = { 'ft1': ( lambda k, create_hosts: FatTree1(k, create_hosts) ), 'ft2': ( lambda k, create_hosts: FatTree2(k, create_hosts) ) }
