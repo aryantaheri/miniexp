@@ -24,6 +24,7 @@ from networkx.utils import is_string_like
 from mininet.topo import Topo
 from mininet.net import Mininet
 from mininet.cli import CLI
+from mininet.link import TCLink
 
 class Uninett(Topo):
     "Uninett Topo"
@@ -103,12 +104,13 @@ class Uninett(Topo):
                     if l.startswith('#'): continue
                     splitline=shlex.split(l)
                     ui,vi,w=splitline[0:3]
+                    bw=splitline[6]
                     u=nodelabels.get(ui,ui)
                     v=nodelabels.get(vi,vi)
                     edge_data={'value':float(w)}
                     extra_attr=zip(splitline[3::2],splitline[4::2])
                     edge_data.update(extra_attr)
-                    self.add_link(ui, vi, w)
+                    self.add_link(ui, vi, w, bw)
                     if G.has_edge(u,v):
                         if G[u][v]['value'] > float(w):
                             G.add_edge(u,v,edge_data)
@@ -121,21 +123,30 @@ class Uninett(Topo):
         return G
 
 
-    def add_link( self, src_id, dst_id, weight ):
+    def add_link( self, src_id, dst_id, weight, bw ):
         src = self.uninett_switches.get(src_id)
         dst = self.uninett_switches.get(dst_id)
         print src_id, dst_id
-        print src, ' -> ', dst
-        self.addLink(src, dst)
+        print 'add link: ', src, ' -> ', dst, 'bw:', bw 
+        linkopts = dict(bw=int(bw)/1000000)
+        self.addLink(src, dst, **linkopts)
         
 
+    def set_link_load( self ):
+        print 'Not there'
+        
 def download_topo( url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
     filename = urllib.urlretrieve ( url, "/tmp/isis-uninett.net")
     print filename
     return filename
 
+def download_link_load( url = 'https://drift.uninett.no/nett/ip-nett/load-now' ):
+    filename = urllib.urlretrieve ( url, "/tmp/uninett-load-now")
+    print filename
+    return filename
+
 if __name__ == '__main__':
-    net = Mininet( topo=Uninett() )
+    net = Mininet( topo=Uninett(), link=TCLink)
     net.start()
     CLI( net )
     net.stop()
