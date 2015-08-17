@@ -20,9 +20,11 @@ __author__ = """Aric Hagberg (hagberg@lanl.gov)"""
 import networkx
 import math
 import urllib
+from functools import partial
 from networkx.utils import is_string_like
 from mininet.topo import Topo
 from mininet.net import Mininet
+from mininet.node import Controller, RemoteController
 from mininet.cli import CLI
 from mininet.link import TCLink
 
@@ -122,13 +124,24 @@ class Uninett(Topo):
             raise Exception("No graph definition found")
         return G
 
+    def add_switch( self, xx):
+        print 'Not implemented'
+    
+    def add_host( self, yy):
+        print 'Not implemented'
 
     def add_link( self, src_id, dst_id, weight, bw ):
         src = self.uninett_switches.get(src_id)
         dst = self.uninett_switches.get(dst_id)
-        print src_id, dst_id
-        print 'add link: ', src, ' -> ', dst, 'bw:', bw 
-        linkopts = dict(bw=int(bw)/1000000)
+        # print src_id, dst_id
+        # Mininet bw is specified in Mbps
+        # UNINETT topo link capacity is in Kbps
+        # Scale: 1:100
+        linkopts = dict(bw=int(bw)/100000)
+        print 'add link: %s -> %s (options: %s)' %(src, dst, linkopts) 
+        if not src or not dst:
+            print 'src %s or dst %s not available' % (src, dst)
+            return
         self.addLink(src, dst, **linkopts)
         
 
@@ -138,15 +151,15 @@ class Uninett(Topo):
 def download_topo( url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
     filename = urllib.urlretrieve ( url, "/tmp/isis-uninett.net")
     print filename
-    return filename
+    return filename[0]
 
 def download_link_load( url = 'https://drift.uninett.no/nett/ip-nett/load-now' ):
     filename = urllib.urlretrieve ( url, "/tmp/uninett-load-now")
     print filename
-    return filename
+    return filename[0]
 
 if __name__ == '__main__':
-    net = Mininet( topo=Uninett(), link=TCLink)
+    net = Mininet( topo=Uninett(), link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ) )
     net.start()
     CLI( net )
     net.stop()
