@@ -24,7 +24,7 @@ from functools import partial
 from networkx.utils import is_string_like
 from mininet.topo import Topo
 from mininet.net import Mininet
-from mininet.node import Controller, RemoteController
+from mininet.node import Controller, RemoteController, OVSSwitch
 from mininet.cli import CLI
 from mininet.link import TCLink
 
@@ -32,6 +32,7 @@ class Uninett(Topo):
     "Uninett Topo"
 
     uninett_switches = {}
+    graph = None
 
     def __init__( self, update_topo = False, url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
         Topo.__init__( self )
@@ -41,9 +42,13 @@ class Uninett(Topo):
         else:
             topo_file_path = '/tmp/isis-uninett.net'
         
-#        self.switches = {}
-        self.read_pajek(topo_file_path)
+        global graph 
+        self.graph = self.read_pajek(topo_file_path)
+        #self.set_switch_config(G)
         
+    def get_graph(self):
+        return self.graph
+
     def read_pajek(self, path):
         """Read graph in pajek format from path. Returns an XGraph or XDiGraph.
         """
@@ -95,9 +100,7 @@ class Uninett(Topo):
                     extra_attr=zip(splitline[4::2],splitline[5::2])
                     #print extra_attr
                     G.node_attr[label].update(extra_attr)
-                    sw = self.addSwitch('s%s' % id)
-                    print 'Add Sw ', id, sw, {id: sw}
-                    self.uninett_switches.update({id: sw})
+                    self.add_switch(id, label, x, y)
                     l = lines.next()
                     l = l.lower()
             if l.startswith("*arcs"):
@@ -112,7 +115,7 @@ class Uninett(Topo):
                     edge_data={'value':float(w)}
                     extra_attr=zip(splitline[3::2],splitline[4::2])
                     edge_data.update(extra_attr)
-                    self.add_link(ui, vi, w, bw)
+                    self.add_switch_link(ui, vi, w, bw)
                     if G.has_edge(u,v):
                         if G[u][v]['value'] > float(w):
                             G.add_edge(u,v,edge_data)
@@ -124,21 +127,29 @@ class Uninett(Topo):
             raise Exception("No graph definition found")
         return G
 
-    def add_switch( self, xx):
-        print 'Not implemented'
+    def add_switch(self, id, label, x, y):
+        sw = self.addSwitch('s%s' % id)
+#        sw.vsctl('set', sw, 'other_config:label=%s' % label)
+        print 'Added Sw ', id, sw, {id: sw}
+        self.uninett_switches.update({id: sw})
+        self.add_host(sw, id)
     
-    def add_host( self, yy):
-        print 'Not implemented'
+    def add_host(self, sw, host_id):
+        host = self.addHost('h%s' % host_id)
+        self.addLink(host, sw)
+        print 'Added Host %s to Switch %s' % (host, sw)
 
-    def add_link( self, src_id, dst_id, weight, bw ):
+
+    def add_switch_link(self, src_id, dst_id, weight, bw):
         src = self.uninett_switches.get(src_id)
         dst = self.uninett_switches.get(dst_id)
         # print src_id, dst_id
         # Mininet bw is specified in Mbps
         # UNINETT topo link capacity is in Kbps
         # Scale: 1:100
-        linkopts = dict(bw=int(bw)/100000)
-        print 'add link: %s -> %s (options: %s)' %(src, dst, linkopts) 
+        if bw:
+            linkopts = dict(bw=int(bw)/100000)
+        print 'Added inter-switch link: %s -> %s (options: %s)' %(src, dst, linkopts) 
         if not src or not dst:
             print 'src %s or dst %s not available' % (src, dst)
             return
@@ -148,6 +159,20 @@ class Uninett(Topo):
     def set_link_load( self ):
         print 'Not there'
         
+
+def set_switch_config(net, cli, topo, G):
+#        print 'Node attributes: '                                                                                   
+#        print G.node_attr 
+    for node in topo.nodes():
+        if topo.isSwitch(node):
+            print node
+            print topo.nodeInfo(node)
+            node_obj = net.get(node)
+            print node_obj
+            print node_obj.bridgeOpts()
+#        for sw_label in G.node_attr:
+#            self.do_sh('ovs-vsctl set bridge %s other_config:{label=%s,x=%s,y=%s}' % (G.node_attr[sw_label][id], sw_label, G.node_attr[sw_label][x], G.node_attr[sw_label][y])) 
+
 def download_topo( url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
     filename = urllib.urlretrieve ( url, "/tmp/isis-uninett.net")
     print filename
@@ -159,8 +184,10 @@ def download_link_load( url = 'https://drift.uninett.no/nett/ip-nett/load-now' )
     return filename[0]
 
 if __name__ == '__main__':
-    net = Mininet( topo=Uninett(), link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ) )
+    topology = Uninett()
+    net = Mininet( topo=topology, link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ), switch=OVSSwitch)
     net.start()
+#    set_switch_config(net, None, topology, topology.get_graph())
     CLI( net )
     net.stop()
 
