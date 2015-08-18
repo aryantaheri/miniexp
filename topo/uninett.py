@@ -161,17 +161,16 @@ class Uninett(Topo):
         
 
 def set_switch_config(net, cli, topo, G):
-#        print 'Node attributes: '                                                                                   
-#        print G.node_attr 
-    for node in topo.nodes():
-        if topo.isSwitch(node):
-            print node
-            print topo.nodeInfo(node)
-            node_obj = net.get(node)
-            print node_obj
-            print node_obj.bridgeOpts()
-#        for sw_label in G.node_attr:
-#            self.do_sh('ovs-vsctl set bridge %s other_config:{label=%s,x=%s,y=%s}' % (G.node_attr[sw_label][id], sw_label, G.node_attr[sw_label][x], G.node_attr[sw_label][y])) 
+#    print 'Node attributes: '                       
+#    print G.node_attr 
+    for node_name in topo.nodes():
+        if topo.isSwitch(node_name):
+#            print node_name
+            node = net.get(node_name)
+            for sw_label in G.node_attr:
+                if 's%s' % G.node_attr[sw_label]['id'] == node_name:
+#                    print 'ovs-vsctl set bridge %s other_config:{label=%s,x=%s,y=%s,area=%s}' % (node_name, sw_label, G.node_attr[sw_label]['x'], G.node_attr[sw_label]['y'], G.node_attr[sw_label]['area'])
+                    node.vsctl('set', 'bridge %s other_config:{label=%s,x=%s,y=%s,area=%s}' % (node_name, sw_label, G.node_attr[sw_label]['x'], G.node_attr[sw_label]['y'], G.node_attr[sw_label]['area'])) 
 
 def download_topo( url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
     filename = urllib.urlretrieve ( url, "/tmp/isis-uninett.net")
@@ -187,7 +186,7 @@ if __name__ == '__main__':
     topology = Uninett()
     net = Mininet( topo=topology, link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ), switch=OVSSwitch)
     net.start()
-#    set_switch_config(net, None, topology, topology.get_graph())
+    set_switch_config(net, None, topology, topology.get_graph())
     CLI( net )
     net.stop()
 
