@@ -156,9 +156,65 @@ class Uninett(Topo):
         self.addLink(src, dst, **linkopts)
         
 
-    def set_link_load( self ):
-        print 'Not there'
+def set_link_load(net, topo, refresh = True):
+    if refresh:
+        filename = download_link_load()
+    else:
+        filename = '/tmp/uninett-load-now'
+
+    G = topo.get_graph()
+    loads = get_linkloads(G, filename)
+    for (u, v) in loads:
+        u_hostname = 'h%s' % G.node_attr[u]['id']
+        v_hostname = 'h%s' % G.node_attr[v]['id']
+        uv_load = '%sK' % loads[(u, v)]
+        print 'Set load: src %s(%s) -> dst %s(%s) : load=%sbps' % (u, u_hostname, v, v_hostname, uv_load)
+        u_host = net.get(u_hostname)
+        v_host = net.get(v_hostname)
+        net.iperf((u_host, v_host), l4Type = 'UDP', udpBw = uv_load, seconds = 30)
+
+
+
+def get_linkloads(G, filename):
+    loads_by_label = {}
+    loads = {}
+    sanitized_loads = {}
+
+    lines = read_linkloads(filename)
+    lines = iter([line.rstrip('\n') for line in lines])
+    while lines:
+        try:
+            load = lines.next().lower()
+        except:
+            break
+        fields = load.split()
+        label = fields[0].strip()
+        avg_in = int(fields[3].strip())
+        avg_out = int(fields[4].strip())
+        loads_by_label[label] = (avg_out, avg_in)
+    
+    for (u, v, edge_data) in G.edges(data=True):
+        if not 'l' in edge_data: continue
+        label = edge_data['l']
+        if label in loads_by_label:
+            loads[(u, v)] = loads_by_label[label]
         
+    for (u, v) in loads:
+        if (v, u) in loads:
+            if loads[(v, u)][1] > loads[(u, v)][0]:
+                sanitized_loads[(u, v)] = loads[(v, u)][1]
+            else:
+                sanitized_loads[(u, v)] = loads[(u, v)][0]
+        else:
+            sanitized_loads[(u, v)] = loads[(u, v)][0]
+            sanitized_loads[(v, u)] = loads[(u, v)][1]
+
+    return sanitized_loads
+        
+def read_linkloads(filename):
+    fh = open(filename, mode='r')
+    lines = fh.readlines()
+    return lines
 
 def set_switch_config(net, cli, topo, G):
 #    print 'Node attributes: '                       
@@ -172,21 +228,24 @@ def set_switch_config(net, cli, topo, G):
 #                    print 'ovs-vsctl set bridge %s other_config:{label=%s,x=%s,y=%s,area=%s}' % (node_name, sw_label, G.node_attr[sw_label]['x'], G.node_attr[sw_label]['y'], G.node_attr[sw_label]['area'])
                     node.vsctl('set', 'bridge %s other_config:{label=%s,x=%s,y=%s,area=%s}' % (node_name, sw_label, G.node_attr[sw_label]['x'], G.node_attr[sw_label]['y'], G.node_attr[sw_label]['area'])) 
 
-def download_topo( url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
+
+def download_topo(url = 'https://drift.uninett.no/nett/ip-nett/isis-uninett.net' ):
     filename = urllib.urlretrieve ( url, "/tmp/isis-uninett.net")
     print filename
     return filename[0]
 
-def download_link_load( url = 'https://drift.uninett.no/nett/ip-nett/load-now' ):
+def download_link_load(url = 'https://drift.uninett.no/nett/ip-nett/load-now'):
     filename = urllib.urlretrieve ( url, "/tmp/uninett-load-now")
     print filename
     return filename[0]
 
 if __name__ == '__main__':
+    scale_factor = 100
     topology = Uninett()
     net = Mininet( topo=topology, link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ), switch=OVSSwitch)
     net.start()
     set_switch_config(net, None, topology, topology.get_graph())
+    set_link_load(net, topology, True)
     CLI( net )
     net.stop()
 
