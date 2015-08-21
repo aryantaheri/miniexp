@@ -156,7 +156,7 @@ class Uninett(Topo):
         self.addLink(src, dst, **linkopts)
         
 
-def set_link_load(net, topo, refresh = True):
+def run_sequential_iperf(net, topo, refresh = True):
     if refresh:
         filename = download_link_load()
     else:
@@ -173,6 +173,35 @@ def set_link_load(net, topo, refresh = True):
         v_host = net.get(v_hostname)
         net.iperf((u_host, v_host), l4Type = 'UDP', udpBw = uv_load, seconds = 30)
 
+
+def set_link_load(net, topo, refresh = True):
+    if refresh:
+        filename = download_link_load()
+    else:
+        filename = '/tmp/uninett-load-now'
+
+    duration = 10
+    G = topo.get_graph()
+    loads = get_linkloads(G, filename)
+    for (u, v) in loads:
+        u_hostname = 'h%s' % G.node_attr[u]['id']
+        v_hostname = 'h%s' % G.node_attr[v]['id']
+        uv_load = '%sK' % loads[(u, v)]
+
+        u_host = net.get(u_hostname)
+        v_host = net.get(v_hostname)
+
+        print 'Set load: src %s(%s:%s) -> dst %s(%s:%s) : load=%sbps' % (u, u_hostname, u_host.IP(), v, v_hostname, v_host.IP(), uv_load)
+                
+        v_out = v_host.cmd('iperf3 -s -D')
+        print 'Server output: %s' % v_out
+        u_out = u_host.cmd('iperf3 -c %s -b %s -t %d' % (v_host.IP(), uv_load, duration))
+        print 'Client output: %s' % u_out
+        
+def clean_link_load():
+    """
+    Method for killing iperf3 before shutting down mininet
+    """
 
 
 def get_linkloads(G, filename):
@@ -245,7 +274,7 @@ if __name__ == '__main__':
     net = Mininet( topo=topology, link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ), switch=OVSSwitch)
     net.start()
     set_switch_config(net, None, topology, topology.get_graph())
-    set_link_load(net, topology, True)
+#    set_link_load(net, topology, True)
     CLI( net )
     net.stop()
 
