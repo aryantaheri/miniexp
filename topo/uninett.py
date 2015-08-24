@@ -180,7 +180,7 @@ def set_link_load(net, topo, refresh = True):
     else:
         filename = '/tmp/uninett-load-now'
 
-    duration = 10
+    duration = 1000
     G = topo.get_graph()
     loads = get_linkloads(G, filename)
     for (u, v) in loads:
@@ -192,15 +192,33 @@ def set_link_load(net, topo, refresh = True):
         v_host = net.get(v_hostname)
 
         print 'Set load: src %s(%s:%s) -> dst %s(%s:%s) : load=%sbps' % (u, u_hostname, u_host.IP(), v, v_hostname, v_host.IP(), uv_load)
-                
+        log_file = get_log_file(u_hostname, v_hostname)
+        err_file = get_log_file(u_hostname, v_hostname, err = True)
+
+        #FIXME: fix parallel clients
+        #       1) use port numbers to support parallel clients
+        #       2) add individual hosts to support parallel clients
         v_out = v_host.cmd('iperf3 -s -D')
         print 'Server output: %s' % v_out
-        u_out = u_host.cmd('iperf3 -c %s -b %s -t %d' % (v_host.IP(), uv_load, duration))
+
+        #TODO: Skip if exit code != 0
+        u_out = u_host.cmd('ping -c 2 %s' % v_host.IP())
         print 'Client output: %s' % u_out
         
+        u_out = u_host.cmd('iperf3 -c %s -b %s -t %d > %s 2> %s &' % (v_host.IP(), uv_load, duration, log_file, err_file))
+        print 'Client output: %s' % u_out
+      
+def get_log_file(u_hostname, v_hostname, err = False):
+    if not err:
+        return '/tmp/%s' % (u_hostname+'-'+v_hostname+'.out')
+    else:
+        return '/tmp/%s' % (u_hostname+'-'+v_hostname+'.err')
+
 def clean_link_load():
     """
     Method for killing iperf3 before shutting down mininet
+    # killall iperf3
+    # rm -f /tmp/*.out
     """
 
 
@@ -274,7 +292,7 @@ if __name__ == '__main__':
     net = Mininet( topo=topology, link=TCLink, controller=partial( RemoteController, ip='192.168.10.15', port=6633 ), switch=OVSSwitch)
     net.start()
     set_switch_config(net, None, topology, topology.get_graph())
-#    set_link_load(net, topology, True)
+    set_link_load(net, topology, True)
     CLI( net )
     net.stop()
 
